@@ -1,25 +1,48 @@
 # coding=utf-8
 from __future__ import absolute_import
 
-### (Don't forget to remove me)
-# This is a basic skeleton for your plugin's __init__.py. You probably want to adjust the class name of your plugin
-# as well as the plugin mixins it's subclassing from. This is really just a basic skeleton to get you started,
-# defining your plugin as a template plugin, settings and asset plugin. Feel free to add or remove mixins
-# as necessary.
-#
-# Take a look at the documentation on what other plugin mixins are available.
-
 import octoprint.plugin
+import octoprint.settings
+
+from octoprint.server import app
+from flask import Blueprint, render_template, abort
+from jinja2 import TemplateNotFound
+
+duetwebcontrol = Blueprint("duet", __name__, template_folder="www", static_url_path='', static_folder="www")
+
+@duetwebcontrol.route('/')
+@duetwebcontrol.route('/reprap')
+def reprap():
+	try:
+		return render_template('reprap.htm')
+	except TemplateNotFound:
+		abort(404)
+
+@duetwebcontrol.route('/js/comm.js')
+def js_comm():
+	r = duetwebcontrol.send_static_file('js/comm.js')
+	
+	apiUrl = __plugin_implementation__._settings.get(["apiUrl"])
+	if apiUrl.startswith('/'):
+		r.data = r.data.replace("ajaxPrefix = \"\"", "ajaxPrefix = window.location.origin + \"" + apiUrl + "\"")
+	else:
+		r.data = r.data.replace("ajaxPrefix = \"\"", "ajaxPrefix = \"" + apiUrl + "\"")
+	return r
 
 class DuetPlugin(octoprint.plugin.SettingsPlugin,
-                 octoprint.plugin.AssetPlugin,
-                 octoprint.plugin.TemplatePlugin):
+                octoprint.plugin.AssetPlugin,
+                octoprint.plugin.TemplatePlugin,
+                octoprint.plugin.StartupPlugin):
+
+	def __init__(self):
+		pass
 
 	##~~ SettingsPlugin mixin
 
 	def get_settings_defaults(self):
 		return dict(
-			# put your plugin's default settings here
+			apiUrl = "/duet/",
+			password = "reprap"    
 		)
 
 	##~~ AssetPlugin mixin
@@ -33,6 +56,11 @@ class DuetPlugin(octoprint.plugin.SettingsPlugin,
 			less=["less/duet.less"]
 		)
 
+	#~~ StartupPlugin
+
+	def on_startup(self, *args, **kwargs):
+		app.register_blueprint(duetwebcontrol, url_prefix="/duetwebcontrol")
+
 	##~~ Softwareupdate hook
 
 	def get_update_information(self):
@@ -41,7 +69,7 @@ class DuetPlugin(octoprint.plugin.SettingsPlugin,
 		# for details.
 		return dict(
 			duet=dict(
-				displayName="Duet Plugin",
+				displayName="Duet",
 				displayVersion=self._plugin_version,
 
 				# version check: github repository

@@ -10,7 +10,7 @@ $(function() {
 
         // assign the injected parameters, e.g.:
         // self.loginStateViewModel = parameters[0];
-        // self.settingsViewModel = parameters[1];
+        self.settings = parameters[0];
 
         // TODO: Implement your plugin's view model here.
     }
@@ -22,8 +22,8 @@ $(function() {
     OCTOPRINT_VIEWMODELS.push({
         construct: DuetViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
-        dependencies: [ /* "loginStateViewModel", "settingsViewModel" */ ],
+        dependencies: ["settingsViewModel"],
         // Elements to bind to, e.g. #settings_plugin_duet, #tab_plugin_duet, ...
-        elements: [ /* ... */ ]
+        elements: ["#settings_plugin_duet"]
     });
 });
