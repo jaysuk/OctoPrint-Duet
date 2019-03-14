@@ -63,8 +63,10 @@ additional_setup_parameters = {}
 
 ########################################################################################################################
 
-import setuptools
+import subprocess
 from distutils.command.build import build as _build
+
+import setuptools
 
 class build(_build):  # pylint: disable=invalid-name
   """A build command class that will be invoked during package install.
@@ -104,7 +106,14 @@ class build(_build):  # pylint: disable=invalid-name
 # The output of custom commands (including failures) will be logged in the
 # worker-startup log.
 
-CUSTOM_COMMANDS = []
+import os
+scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts")
+
+CUSTOM_COMMANDS = [
+  ['sudo', 'cp', os.path.join(scripts_dir, "wifi-switch.sh"), '/usr/bin/'],
+  ['sudo', 'chmod', '+x', '/usr/bin/wifi-switch.sh'],
+  ['echo', 'Custom commands finished !']
+]
 
 class CustomCommands(setuptools.Command):
   """A setuptools Command class able to run arbitrary commands."""
