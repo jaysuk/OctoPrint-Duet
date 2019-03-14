@@ -8,6 +8,8 @@ from octoprint.server import app
 from flask import Blueprint, render_template, abort
 from jinja2 import TemplateNotFound
 
+import re
+
 duetwebcontrol = Blueprint("duet", __name__, template_folder="www", static_url_path='', static_folder="www")
 
 @duetwebcontrol.route('/')
@@ -32,7 +34,8 @@ def js_comm():
 class DuetPlugin(octoprint.plugin.SettingsPlugin,
                 octoprint.plugin.AssetPlugin,
                 octoprint.plugin.TemplatePlugin,
-                octoprint.plugin.StartupPlugin):
+                octoprint.plugin.StartupPlugin,
+				octoprint.plugin.EventHandlerPlugin):
 
 	def __init__(self):
 		pass
@@ -61,6 +64,22 @@ class DuetPlugin(octoprint.plugin.SettingsPlugin,
 	def on_startup(self, *args, **kwargs):
 		app.register_blueprint(duetwebcontrol, url_prefix="/duetwebcontrol")
 
+	#~~ EventHandlerPlugin
+
+    def on_event(self, event, payload):
+        if (event == 'Connected'):
+            if self._printer._comm._temperature_timer is not None:
+                try:
+                    self._printer._comm._temperature_timer.cancel()
+                except:
+                    pass
+
+            if self._printer._comm._sd_status_timer is not None:
+                try:
+                    self._printer._comm._sd_status_timer.cancel()
+                except:
+                    pass
+
 	##~~ Softwareupdate hook
 
 	def get_update_information(self):
@@ -83,6 +102,12 @@ class DuetPlugin(octoprint.plugin.SettingsPlugin,
 			)
 		)
 
+	def gcode_received(self, comm, line, *args, **kwargs):
+
+		# _printer.commands(["ok"])
+
+        return line
+
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
 # ("OctoPrint-PluginSkeleton"), you may define that here. Same goes for the other metadata derived from setup.py that
@@ -95,6 +120,7 @@ def __plugin_load__():
 
 	global __plugin_hooks__
 	__plugin_hooks__ = {
-		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
+		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
+		"octoprint.comm.protocol.gcode.received": __plugin_implementation__.gcode_received
 	}
 
